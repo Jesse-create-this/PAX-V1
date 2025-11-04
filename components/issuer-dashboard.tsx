@@ -3,388 +3,670 @@
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Building2, Plus, Users, Award, Calendar, LogOut, CheckCircle, Clock, Send } from "lucide-react"
-
-interface User {
-  wallet_address: string
-  user_type: "student" | "issuer" | "admin"
-  name?: string
-  institution_name?: string
-}
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Award, TrendingUp, Plus, Send, Eye, Share2, ShieldCheck, GraduationCap } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import CertificateViewer from "./certificate-viewer"
+import IssuerExplainerCursor from "./issuer-explainer-cursor"
 
 interface IssuerDashboardProps {
-  user: User
-  onDisconnect: () => void
+  account: string
 }
 
-// Mock data for demonstration
-const mockIssuedCredentials = [
-  {
-    id: "1",
-    title: "Bachelor of Computer Science",
-    studentName: "John Doe",
-    studentAddress: "0x1234...5678",
-    issueDate: "2024-05-15",
-    status: "issued",
-    type: "degree",
-  },
-  {
-    id: "2",
-    title: "Web Development Certificate",
-    studentName: "Jane Smith",
-    studentAddress: "0x9876...4321",
-    issueDate: "2024-03-20",
-    status: "issued",
-    type: "certificate",
-  },
-  {
-    id: "3",
-    title: "Data Science Bootcamp",
-    studentName: "Mike Johnson",
-    studentAddress: "0x5555...7777",
-    issueDate: "2024-01-10",
-    status: "pending",
-    type: "certificate",
-  },
-]
+interface Certificate {
+  id: number
+  studentName: string
+  studentAddress: string
+  credentialType: string
+  subject: string
+  issueDate: string
+  status: "verified" | "pending" | "issued"
+  grade?: string
+  description?: string
+  issuer?: string
+  issuerAddress?: string
+  credentialHash: string
+  blockchainTxHash?: string
+  documentType: "credential" | "license"
+  licenseNumber?: string
+  expiryDate?: string
+  licenseClass?: string
+  restrictions?: string
+  issuingAuthority?: string
+}
 
-export function IssuerDashboard({ user, onDisconnect }: IssuerDashboardProps) {
-  const [activeTab, setActiveTab] = useState("overview")
-  const [isIssuing, setIsIssuing] = useState(false)
+export default function IssuerDashboard({ account }: IssuerDashboardProps) {
+  const [issuedCredentials, setIssuedCredentials] = useState<Certificate[]>([
+    {
+      id: 1,
+      studentName: "Alice Johnson",
+      studentAddress: "0x123abc456def789ghi012jkl345mno678pqr901st",
+      credentialType: "Bachelor's Degree",
+      subject: "Computer Science",
+      issueDate: "2024-01-15",
+      status: "verified",
+      grade: "3.8 GPA",
+      description:
+        "Completed 4-year program with focus on software engineering, algorithms, and blockchain technology. Demonstrated exceptional performance in advanced coursework.",
+      issuer: "Tech University",
+      issuerAddress: account,
+      credentialHash: "0xabc123def456ghi789jkl012mno345pqr678stu901vwx234yz567",
+      blockchainTxHash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      documentType: "credential",
+    },
+    {
+      id: 2,
+      studentName: "Bob Smith",
+      studentAddress: "0x456def789ghi012jkl345mno678pqr901stu234vwx",
+      credentialType: "Driving License",
+      subject: "Class A Commercial",
+      issueDate: "2024-01-10",
+      status: "issued",
+      description: "Commercial driving license with endorsements for hazardous materials and passenger transport.",
+      issuer: "Department of Motor Vehicles",
+      issuerAddress: account,
+      credentialHash: "0xdef456ghi789jkl012mno345pqr678stu901vwx234yz567abc123",
+      blockchainTxHash: "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+      documentType: "license",
+      licenseNumber: "CDL-2024-001234",
+      expiryDate: "2028-01-10",
+      licenseClass: "Class A",
+      restrictions: "Must wear corrective lenses",
+      issuingAuthority: "State DMV",
+    },
+    {
+      id: 3,
+      studentName: "Carol Davis",
+      studentAddress: "0x789ghi012jkl345mno678pqr901stu234vwx567yz8",
+      credentialType: "Professional License",
+      subject: "Software Engineering",
+      issueDate: "2024-01-05",
+      status: "verified",
+      description:
+        "Professional software engineering license with specialization in blockchain and cybersecurity systems.",
+      issuer: "Professional Engineering Board",
+      issuerAddress: account,
+      credentialHash: "0xghi789jkl012mno345pqr678stu901vwx234yz567abc123def456",
+      blockchainTxHash: "0x567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef123456",
+      documentType: "license",
+      licenseNumber: "PE-2024-567890",
+      expiryDate: "2026-01-05",
+      licenseClass: "Professional Engineer",
+      restrictions: "Valid for software systems only",
+      issuingAuthority: "State Engineering Board",
+    },
+  ])
+
   const [newCredential, setNewCredential] = useState({
-    title: "",
-    description: "",
-    studentAddress: "",
     studentName: "",
-    type: "certificate",
+    studentAddress: "",
+    credentialType: "",
+    subject: "",
+    description: "",
+    grade: "",
+    // License fields
+    licenseNumber: "",
+    expiryDate: "",
+    licenseClass: "",
+    restrictions: "",
+    issuingAuthority: "",
   })
 
+  const [documentType, setDocumentType] = useState<"credential" | "license">("credential")
+  const [isIssuing, setIsIssuing] = useState(false)
+  const [selectedCertificate, setSelectedCertificate] = useState<Certificate | null>(null)
+  const [showCertificateViewer, setShowCertificateViewer] = useState(false)
+  const { toast } = useToast()
+
   const handleIssueCredential = async () => {
-    setIsIssuing(true)
-    // Mock credential issuance
-    setTimeout(() => {
-      alert(`Credential "${newCredential.title}" issued successfully to ${newCredential.studentName}!`)
-      setNewCredential({
-        title: "",
-        description: "",
-        studentAddress: "",
-        studentName: "",
-        type: "certificate",
+    const requiredFields =
+      documentType === "credential"
+        ? ["studentName", "studentAddress", "credentialType"]
+        : ["studentName", "studentAddress", "credentialType", "licenseNumber", "expiryDate"]
+
+    const missingFields = requiredFields.filter((field) => !newCredential[field as keyof typeof newCredential])
+
+    if (missingFields.length > 0) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields",
+        variant: "destructive",
       })
+      return
+    }
+
+    setIsIssuing(true)
+
+    try {
+      // Simulate blockchain transaction
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
+      const credential: Certificate = {
+        id: issuedCredentials.length + 1,
+        studentName: newCredential.studentName,
+        studentAddress: newCredential.studentAddress,
+        credentialType: newCredential.credentialType,
+        subject: newCredential.subject,
+        issueDate: new Date().toISOString().split("T")[0],
+        status: "issued",
+        grade: documentType === "credential" ? newCredential.grade : undefined,
+        description: newCredential.description,
+        issuer:
+          documentType === "credential" ? "Tech University" : newCredential.issuingAuthority || "Licensing Authority",
+        issuerAddress: account,
+        credentialHash: "0x" + Math.random().toString(16).substr(2, 64),
+        blockchainTxHash: "0x" + Math.random().toString(16).substr(2, 64),
+        documentType,
+        // License-specific fields
+        licenseNumber: documentType === "license" ? newCredential.licenseNumber : undefined,
+        expiryDate: documentType === "license" ? newCredential.expiryDate : undefined,
+        licenseClass: documentType === "license" ? newCredential.licenseClass : undefined,
+        restrictions: documentType === "license" ? newCredential.restrictions : undefined,
+        issuingAuthority: documentType === "license" ? newCredential.issuingAuthority : undefined,
+      }
+
+      setIssuedCredentials([credential, ...issuedCredentials])
+
+      // Reset form
+      setNewCredential({
+        studentName: "",
+        studentAddress: "",
+        credentialType: "",
+        subject: "",
+        description: "",
+        grade: "",
+        licenseNumber: "",
+        expiryDate: "",
+        licenseClass: "",
+        restrictions: "",
+        issuingAuthority: "",
+      })
+
+      toast({
+        title: `${documentType === "credential" ? "Credential" : "License"} Issued Successfully`,
+        description: `${documentType === "credential" ? "Credential" : "License"} issued to ${newCredential.studentName} and recorded on blockchain`,
+      })
+    } catch (error) {
+      toast({
+        title: "Issuance Failed",
+        description: `Failed to issue ${documentType}. Please try again.`,
+        variant: "destructive",
+      })
+    } finally {
       setIsIssuing(false)
-      setActiveTab("credentials")
-    }, 2000)
+    }
+  }
+
+  const handleViewCertificate = (certificate: Certificate) => {
+    setSelectedCertificate(certificate)
+    setShowCertificateViewer(true)
+  }
+
+  const handleShareCertificate = (certificate: Certificate) => {
+    const shareUrl = `${window.location.origin}/verify/${certificate.credentialHash}`
+    navigator.clipboard.writeText(shareUrl)
+    toast({
+      title: "Share Link Copied",
+      description: `Verification link for ${certificate.studentName}'s ${certificate.documentType} copied to clipboard`,
+    })
+  }
+
+  const credentialTypes = {
+    credential: [
+      "Bachelor's Degree",
+      "Master's Degree",
+      "PhD",
+      "Certificate",
+      "Diploma",
+      "Associate Degree",
+      "Professional Certificate",
+    ],
+    license: [
+      "Driving License",
+      "Professional License",
+      "Business License",
+      "Medical License",
+      "Legal License",
+      "Teaching License",
+      "Pilot License",
+      "Contractor License",
+    ],
+  }
+
+  const licenseClasses = {
+    "Driving License": ["Class A", "Class B", "Class C", "CDL", "Motorcycle", "Commercial"],
+    "Professional License": ["Professional Engineer", "Architect", "Surveyor", "Contractor"],
+    "Business License": ["General Business", "Food Service", "Retail", "Manufacturing"],
+    "Medical License": ["General Practice", "Specialist", "Nurse", "Pharmacist"],
+    "Legal License": ["Attorney", "Paralegal", "Notary Public"],
+    "Teaching License": ["Elementary", "Secondary", "Special Education", "Administrator"],
+    "Pilot License": ["Private", "Commercial", "Airline Transport", "Instructor"],
+    "Contractor License": ["General", "Electrical", "Plumbing", "HVAC"],
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
-            <Building2 className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-black">Institution Dashboard</h1>
-            <p className="text-gray-600">Issue and manage credentials</p>
-          </div>
+    <section className="py-16 px-4">
+      <IssuerExplainerCursor />
+
+      <div className="container mx-auto">
+        <div className="text-center mb-12">
+          <h3 className="text-3xl font-bold mb-4">Issuer Dashboard</h3>
+          <p className="text-gray-600">
+            Issue and manage digital credentials and licenses with blockchain transparency
+          </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={onDisconnect}
-          className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent"
-        >
-          <LogOut className="w-4 h-4 mr-2" />
-          Disconnect
-        </Button>
-      </div>
 
-      {/* Stats Cards */}
-      <div className="grid md:grid-cols-4 gap-6">
-        <Card className="bg-white border shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Issued</p>
-                <p className="text-2xl font-bold text-black">{mockIssuedCredentials.length}</p>
-              </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <Award className="w-6 h-6 text-orange-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white border shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Active</p>
-                <p className="text-2xl font-bold text-black">
-                  {mockIssuedCredentials.filter((c) => c.status === "issued").length}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white border shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Pending</p>
-                <p className="text-2xl font-bold text-black">
-                  {mockIssuedCredentials.filter((c) => c.status === "pending").length}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <Clock className="w-6 h-6 text-yellow-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white border shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Students</p>
-                <p className="text-2xl font-bold text-black">
-                  {new Set(mockIssuedCredentials.map((c) => c.studentAddress)).size}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Users className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-gray-100">
-          <TabsTrigger value="overview" className="data-[state=active]:bg-white">
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="issue" className="data-[state=active]:bg-white">
-            Issue Credential
-          </TabsTrigger>
-          <TabsTrigger value="credentials" className="data-[state=active]:bg-white">
-            Manage Credentials
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-6">
-          <Card className="bg-white border shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-black">Quick Actions</CardTitle>
-              <CardDescription className="text-gray-600">Common tasks for credential management</CardDescription>
+        {/* Stats Cards */}
+        <div className="grid md:grid-cols-4 gap-6 mb-8">
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Issued</CardTitle>
+              <Award className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-2 gap-4">
-                <Button
-                  onClick={() => setActiveTab("issue")}
-                  className="h-20 bg-orange-500 hover:bg-orange-600 text-white"
-                  data-explainer="issue-credential"
-                >
-                  <div className="text-center">
-                    <Plus className="w-6 h-6 mx-auto mb-2" />
-                    <div>Issue New Credential</div>
-                  </div>
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setActiveTab("credentials")}
-                  className="h-20 border-gray-300 text-gray-700 hover:bg-gray-50"
-                >
-                  <div className="text-center">
-                    <Award className="w-6 h-6 mx-auto mb-2" />
-                    <div>View All Credentials</div>
-                  </div>
-                </Button>
-              </div>
+              <div className="text-2xl font-bold">{issuedCredentials.length}</div>
+              <p className="text-xs text-muted-foreground">
+                +{issuedCredentials.filter((c) => c.status === "issued").length} this month
+              </p>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="issue" className="space-y-6">
-          <Card className="bg-white border shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-black">Issue New Credential</CardTitle>
-              <CardDescription className="text-gray-600">
-                Create and issue a new credential to a student
-              </CardDescription>
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Credentials</CardTitle>
+              <GraduationCap className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title" className="text-black">
-                    Credential Title
-                  </Label>
-                  <Input
-                    id="title"
-                    placeholder="e.g., Bachelor of Computer Science"
-                    value={newCredential.title}
-                    onChange={(e) => setNewCredential({ ...newCredential, title: e.target.value })}
-                    className="border-gray-300"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="type" className="text-black">
-                    Credential Type
-                  </Label>
-                  <Select
-                    value={newCredential.type}
-                    onValueChange={(value) => setNewCredential({ ...newCredential, type: value })}
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {issuedCredentials.filter((c) => c.documentType === "credential").length}
+              </div>
+              <p className="text-xs text-muted-foreground">Academic credentials</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Licenses</CardTitle>
+              <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {issuedCredentials.filter((c) => c.documentType === "license").length}
+              </div>
+              <p className="text-xs text-muted-foreground">Professional licenses</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">98.5%</div>
+              <p className="text-xs text-muted-foreground">Verification success</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content Tabs */}
+        <Tabs defaultValue="issue" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="issue">Issue Document</TabsTrigger>
+            <TabsTrigger value="manage">Manage Documents</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="issue" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Plus className="h-5 w-5" />
+                  <span>Issue New Document</span>
+                </CardTitle>
+                <CardDescription>Create and issue a new digital credential or license</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Document Type Toggle */}
+                <div
+                  data-tutorial="document-type"
+                  className="flex items-center justify-center space-x-1 bg-gray-100 rounded-lg p-1"
+                >
+                  <Button
+                    variant={documentType === "credential" ? "default" : "ghost"}
+                    onClick={() => setDocumentType("credential")}
+                    className={`flex-1 ${documentType === "credential" ? "bg-orange-600 hover:bg-orange-700 text-white" : ""}`}
                   >
-                    <SelectTrigger className="border-gray-300">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      <SelectItem value="certificate">Certificate</SelectItem>
-                      <SelectItem value="degree">Degree</SelectItem>
-                      <SelectItem value="diploma">Diploma</SelectItem>
-                      <SelectItem value="badge">Badge</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <GraduationCap className="h-4 w-4 mr-2" />
+                    Academic Credential
+                  </Button>
+                  <Button
+                    variant={documentType === "license" ? "default" : "ghost"}
+                    onClick={() => setDocumentType("license")}
+                    className={`flex-1 ${documentType === "license" ? "bg-orange-600 hover:bg-orange-700 text-white" : ""}`}
+                  >
+                    <ShieldCheck className="h-4 w-4 mr-2" />
+                    Professional License
+                  </Button>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="description" className="text-black">
-                  Description
-                </Label>
-                <Textarea
-                  id="description"
-                  placeholder="Describe the credential and its requirements..."
-                  value={newCredential.description}
-                  onChange={(e) => setNewCredential({ ...newCredential, description: e.target.value })}
-                  className="border-gray-300"
-                />
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="studentName" className="text-black">
-                    Student Name
-                  </Label>
-                  <Input
-                    id="studentName"
-                    placeholder="e.g., John Doe"
-                    value={newCredential.studentName}
-                    onChange={(e) => setNewCredential({ ...newCredential, studentName: e.target.value })}
-                    className="border-gray-300"
-                  />
+                {/* Common Fields */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div data-tutorial="student-name" className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {documentType === "credential" ? "Student Name" : "License Holder Name"} *
+                    </label>
+                    <Input
+                      placeholder={
+                        documentType === "credential" ? "Enter student's full name" : "Enter license holder's full name"
+                      }
+                      value={newCredential.studentName}
+                      onChange={(e) => setNewCredential({ ...newCredential, studentName: e.target.value })}
+                    />
+                  </div>
+                  <div data-tutorial="wallet-address" className="space-y-2">
+                    <label className="text-sm font-medium">Wallet Address *</label>
+                    <Input
+                      placeholder="0x..."
+                      value={newCredential.studentAddress}
+                      onChange={(e) => setNewCredential({ ...newCredential, studentAddress: e.target.value })}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="studentAddress" className="text-black">
-                    Student Wallet Address
-                  </Label>
-                  <Input
-                    id="studentAddress"
-                    placeholder="0x..."
-                    value={newCredential.studentAddress}
-                    onChange={(e) => setNewCredential({ ...newCredential, studentAddress: e.target.value })}
-                    className="border-gray-300"
-                  />
-                </div>
-              </div>
 
-              <Button
-                onClick={handleIssueCredential}
-                disabled={isIssuing || !newCredential.title || !newCredential.studentAddress}
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white"
-              >
-                {isIssuing ? (
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div data-tutorial="credential-type" className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {documentType === "credential" ? "Credential Type" : "License Type"} *
+                    </label>
+                    <Select
+                      value={newCredential.credentialType}
+                      onValueChange={(value) => setNewCredential({ ...newCredential, credentialType: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={`Select ${documentType} type`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {credentialTypes[documentType].map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {documentType === "credential" ? "Subject/Field" : "Specialization/Category"}
+                    </label>
+                    <Input
+                      placeholder={
+                        documentType === "credential" ? "e.g., Computer Science" : "e.g., Commercial Driving"
+                      }
+                      value={newCredential.subject}
+                      onChange={(e) => setNewCredential({ ...newCredential, subject: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                {/* Credential-specific fields */}
+                {documentType === "credential" && (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Grade/GPA</label>
+                      <Input
+                        placeholder="e.g., 3.8 GPA or A"
+                        value={newCredential.grade}
+                        onChange={(e) => setNewCredential({ ...newCredential, grade: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* License-specific fields */}
+                {documentType === "license" && (
                   <>
-                    <Clock className="w-4 h-4 mr-2 animate-spin" />
-                    Issuing Credential...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4 mr-2" />
-                    Issue Credential
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">License Number *</label>
+                        <Input
+                          placeholder="e.g., DL-2024-123456"
+                          value={newCredential.licenseNumber}
+                          onChange={(e) => setNewCredential({ ...newCredential, licenseNumber: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Expiry Date *</label>
+                        <Input
+                          type="date"
+                          value={newCredential.expiryDate}
+                          onChange={(e) => setNewCredential({ ...newCredential, expiryDate: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">License Class</label>
+                        <Select
+                          value={newCredential.licenseClass}
+                          onValueChange={(value) => setNewCredential({ ...newCredential, licenseClass: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select license class" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {newCredential.credentialType &&
+                              licenseClasses[newCredential.credentialType as keyof typeof licenseClasses]?.map(
+                                (cls) => (
+                                  <SelectItem key={cls} value={cls}>
+                                    {cls}
+                                  </SelectItem>
+                                ),
+                              )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Issuing Authority</label>
+                        <Input
+                          placeholder="e.g., State DMV, Professional Board"
+                          value={newCredential.issuingAuthority}
+                          onChange={(e) => setNewCredential({ ...newCredential, issuingAuthority: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Restrictions/Conditions</label>
+                      <Input
+                        placeholder="e.g., Must wear corrective lenses, Valid for specific equipment only"
+                        value={newCredential.restrictions}
+                        onChange={(e) => setNewCredential({ ...newCredential, restrictions: e.target.value })}
+                      />
+                    </div>
                   </>
                 )}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsContent value="credentials" className="space-y-6">
-          <Card className="bg-white border shadow-sm" data-explainer="credential-list">
-            <CardHeader>
-              <CardTitle className="text-black">Issued Credentials</CardTitle>
-              <CardDescription className="text-gray-600">View and manage all credentials you've issued</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {mockIssuedCredentials.map((credential) => (
-                  <div key={credential.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow bg-white">
-                    <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Description</label>
+                  <Textarea
+                    placeholder={`Additional details about the ${documentType}...`}
+                    value={newCredential.description}
+                    onChange={(e) => setNewCredential({ ...newCredential, description: e.target.value })}
+                  />
+                </div>
+
+                <Button
+                  data-tutorial="issue-button"
+                  onClick={handleIssueCredential}
+                  disabled={isIssuing}
+                  className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white"
+                  size="lg"
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  {isIssuing
+                    ? `Issuing ${documentType}...`
+                    : `Issue ${documentType === "credential" ? "Credential" : "License"}`}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="manage" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Issued Documents</CardTitle>
+                <CardDescription>
+                  View and manage all issued credentials and licenses with full blockchain transparency
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {issuedCredentials.map((credential) => (
+                    <div
+                      key={credential.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                    >
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="font-semibold text-lg text-black">{credential.title}</h3>
+                          <h4 className="font-semibold">{credential.studentName}</h4>
                           <Badge
-                            variant="secondary"
-                            className={
-                              credential.status === "issued"
-                                ? "bg-green-100 text-green-800"
-                                : "bg-yellow-100 text-yellow-800"
+                            variant={
+                              credential.status === "verified"
+                                ? "default"
+                                : credential.status === "issued"
+                                  ? "secondary"
+                                  : "outline"
                             }
                           >
-                            {credential.status === "issued" ? (
+                            {credential.status}
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className={
+                              credential.documentType === "license"
+                                ? "bg-blue-50 text-blue-700"
+                                : "bg-green-50 text-green-700"
+                            }
+                          >
+                            {credential.documentType === "license" ? (
                               <>
-                                <CheckCircle className="w-3 h-3 mr-1" />
-                                Issued
+                                <ShieldCheck className="h-3 w-3 mr-1" />
+                                License
                               </>
                             ) : (
                               <>
-                                <Clock className="w-3 h-3 mr-1" />
-                                Pending
+                                <GraduationCap className="h-3 w-3 mr-1" />
+                                Credential
                               </>
                             )}
                           </Badge>
                         </div>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          <div className="flex items-center">
-                            <Users className="w-4 h-4 mr-1" />
-                            {credential.studentName}
-                          </div>
-                          <div className="flex items-center">
-                            <Calendar className="w-4 h-4 mr-1" />
-                            {new Date(credential.issueDate).toLocaleDateString()}
-                          </div>
-                        </div>
-                        <p className="text-sm text-gray-600 mt-2 font-mono">{credential.studentAddress}</p>
+                        <p className="text-sm text-gray-600">
+                          {credential.credentialType} {credential.subject && `in ${credential.subject}`}
+                          {credential.grade && ` • Grade: ${credential.grade}`}
+                          {credential.licenseNumber && ` • License #: ${credential.licenseNumber}`}
+                          {credential.expiryDate && ` • Expires: ${credential.expiryDate}`}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Issued: {credential.issueDate} | To: {credential.studentAddress.slice(0, 10)}...
+                          {credential.studentAddress.slice(-6)}
+                        </p>
+                        <p className="text-xs text-gray-400 font-mono">
+                          Hash: {credential.credentialHash.slice(0, 20)}...
+                        </p>
                       </div>
                       <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent"
-                        >
-                          View Details
+                        <Button size="sm" variant="outline" onClick={() => handleViewCertificate(credential)}>
+                          <Eye className="h-3 w-3 mr-1" />
+                          View
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => handleShareCertificate(credential)}>
+                          <Share2 className="h-3 w-3 mr-1" />
+                          Share
                         </Button>
                       </div>
                     </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Issuance Analytics</CardTitle>
+                <CardDescription>Track your document issuance performance and blockchain transparency</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h4 className="font-semibold">Document Distribution</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm">Academic Credentials</span>
+                        <span className="text-sm font-medium">
+                          {issuedCredentials.filter((c) => c.documentType === "credential").length}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm">Professional Licenses</span>
+                        <span className="text-sm font-medium">
+                          {issuedCredentials.filter((c) => c.documentType === "license").length}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm">Total Documents</span>
+                        <span className="text-sm font-medium">{issuedCredentials.length}</span>
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+                  <div className="space-y-4">
+                    <h4 className="font-semibold">Blockchain Status</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm">Verified on Chain</span>
+                        <span className="text-sm font-medium text-green-600">
+                          {issuedCredentials.filter((c) => c.status === "verified").length}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm">Pending Verification</span>
+                        <span className="text-sm font-medium text-yellow-600">
+                          {issuedCredentials.filter((c) => c.status === "issued").length}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm">Total Transactions</span>
+                        <span className="text-sm font-medium">{issuedCredentials.length}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        {/* Certificate Viewer Modal */}
+        {selectedCertificate && (
+          <CertificateViewer
+            certificate={selectedCertificate}
+            isOpen={showCertificateViewer}
+            onClose={() => {
+              setShowCertificateViewer(false)
+              setSelectedCertificate(null)
+            }}
+            viewerType="issuer"
+          />
+        )}
+      </div>
+    </section>
   )
 }
