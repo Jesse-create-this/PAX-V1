@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Wallet, CheckCircle, Copy, AlertCircle, Smartphone, ExternalLink, Loader2 } from "lucide-react"
+import { Wallet, CheckCircle, Copy, AlertCircle, ExternalLink } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface WalletConnectionProps {
@@ -433,107 +433,109 @@ export default function WalletConnection({ onConnectionChange }: WalletConnectio
     })
   }
 
-  // Show wallet selection
+  // Show wallet selection - modal overlay approach
   if (showWalletOptions) {
     const installedWallets = availableWallets.filter((w) => w.installed)
     const notInstalledWallets = availableWallets.filter((w) => !w.installed)
 
     return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-start justify-center p-3 sm:p-4 pt-12 sm:pt-16 pb-12 sm:pb-16">
-        <div className="w-full max-w-md max-h-[80vh] overflow-y-auto mt-4 sm:mt-8">
-          <Card className="w-full">
-            <CardContent className="p-4 sm:p-6">
-              <div className="text-center mb-4 sm:mb-6">
-                <h3 className="text-base sm:text-lg font-semibold mb-2">Choose Your Wallet</h3>
-                <p className="text-xs sm:text-sm text-gray-600">Connect with one of available wallet providers</p>
-              </div>
-
-              {/* Installed Wallets */}
-              {installedWallets.length > 0 && (
-                <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
-                  <h4 className="text-xs sm:text-sm font-medium text-gray-700">Available Wallets</h4>
-                  {installedWallets.map((wallet, index) => (
-                    <Button
-                      key={index}
-                      onClick={() => connectWallet(wallet)}
-                      disabled={isConnecting}
-                      variant="outline"
-                      className="flex items-center justify-between w-full h-10 sm:h-12 px-3 sm:px-4 hover:bg-gray-50 text-sm"
-                    >
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <span className="text-lg sm:text-xl">{wallet.icon}</span>
-                        <span className="font-medium text-sm sm:text-base">{wallet.name}</span>
-                      </div>
-                      {wallet.type === "mobile" && <Smartphone className="h-3 w-3 sm:h-4 sm:w-4" />}
-                      {isConnecting && <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />}
-                    </Button>
-                  ))}
+      <>
+        {/* Modal Overlay */}
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-start justify-center p-3 sm:p-4 pt-12 sm:pt-16 pb-12 sm:pb-16">
+          <div className="w-full max-w-md max-h-[80vh] overflow-y-auto mt-4 sm:mt-8">
+            <Card className="w-full">
+              <CardContent className="p-4 sm:p-6">
+                <div className="text-center mb-4 sm:mb-6">
+                  <h3 className="text-base sm:text-lg font-semibold mb-2">Choose Your Wallet</h3>
+                  <p className="text-xs sm:text-sm text-gray-600">Connect with one of available wallet providers</p>
                 </div>
-              )}
 
-              {/* Not Installed Wallets */}
-              {notInstalledWallets.length > 0 && (
-                <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
-                  <h4 className="text-xs sm:text-sm font-medium text-gray-700">Install Wallet</h4>
-                  {notInstalledWallets.map((wallet, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-2 sm:p-3 border rounded-lg bg-gray-50"
-                    >
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <span className="text-lg sm:text-xl opacity-50">{wallet.icon}</span>
-                        <span className="font-medium text-gray-600 text-sm sm:text-base">{wallet.name}</span>
-                      </div>
+                {/* Installed Wallets */}
+                {installedWallets.length > 0 && (
+                  <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+                    <h4 className="text-xs sm:text-sm font-medium text-gray-700">Available Wallets</h4>
+                    {installedWallets.map((wallet, index) => (
                       <Button
-                        size="sm"
-                        variant="outline"
+                        key={index}
                         onClick={() => connectWallet(wallet)}
                         disabled={isConnecting}
-                        className="text-xs"
+                        variant="outline"
+                        className="flex items-center justify-between w-full h-10 sm:h-12 px-3 sm:px-4 hover:bg-gray-50 text-sm"
                       >
-                        <ExternalLink className="h-2 w-2 sm:h-3 sm:w-3 mr-1" />
-                        Install
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <span className="text-lg sm:text-xl">{wallet.icon}</span>
+                          <span className="font-medium text-sm sm:text-base">{wallet.name}</span>
+                        </div>
+                        {isConnecting && <div className="animate-spin">⟳</div>}
                       </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
 
-              {/* Instructions */}
-              <div className="p-2 sm:p-3 bg-blue-50 rounded-lg border border-blue-200 mb-3 sm:mb-4">
-                <div className="flex items-start space-x-2">
-                  <Smartphone className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div className="text-xs text-blue-700">
-                    <p className="font-medium">Mobile Wallets</p>
-                    <p className="text-xs">
-                      Use Trust Wallet mobile app or other mobile wallets by visiting this site directly in the wallet
-                      browser
-                    </p>
+                {/* Not Installed Wallets */}
+                {notInstalledWallets.length > 0 && (
+                  <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+                    <h4 className="text-xs sm:text-sm font-medium text-gray-700">Install Wallet</h4>
+                    {notInstalledWallets.map((wallet, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 sm:p-3 border rounded-lg bg-gray-50"
+                      >
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <span className="text-lg sm:text-xl opacity-50">{wallet.icon}</span>
+                          <span className="font-medium text-gray-600 text-sm sm:text-base">{wallet.name}</span>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => connectWallet(wallet)}
+                          disabled={isConnecting}
+                          className="text-xs"
+                        >
+                          <ExternalLink className="h-2 w-2 sm:h-3 sm:w-3 mr-1" />
+                          Install
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Instructions */}
+                <div className="p-2 sm:p-3 bg-blue-50 rounded-lg border border-blue-200 mb-3 sm:mb-4">
+                  <div className="flex items-start space-x-2">
+                    <div className="text-blue-600 mt-0.5 flex-shrink-0">📱</div>
+                    <div className="text-xs text-blue-700">
+                      <p className="font-medium">Mobile Wallets</p>
+                      <p className="text-xs">
+                        Use Trust Wallet mobile app or other mobile wallets by visiting this site directly in the wallet
+                        browser
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex space-x-2 sm:space-x-3">
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowWalletOptions(false)}
-                  className="flex-1 text-xs sm:text-sm"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => window.open("https://ethereum.org/wallets/", "_blank")}
-                  className="flex-1 text-xs sm:text-sm"
-                >
-                  <ExternalLink className="h-2 w-2 sm:h-3 sm:w-3 mr-1" />
-                  More Wallets
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                <div className="flex space-x-2 sm:space-x-3">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setShowWalletOptions(false)}
+                    className="flex-1 text-xs sm:text-sm"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => window.open("https://ethereum.org/wallets/", "_blank")}
+                    className="flex-1 text-xs sm:text-sm"
+                  >
+                    <ExternalLink className="h-2 w-2 sm:h-3 sm:w-3 mr-1" />
+                    More Wallets
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 
@@ -612,7 +614,7 @@ export default function WalletConnection({ onConnectionChange }: WalletConnectio
     >
       {isConnecting ? (
         <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <div className="animate-spin">⟳</div>
           Connecting...
         </>
       ) : (
