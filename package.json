@@ -14,16 +14,27 @@
     "@radix-ui/react-select": "latest",
     "@radix-ui/react-tabs": "latest",
     "@radix-ui/react-toast": "latest",
+    "@web3modal/ethers": "5.1.11",
+    "@web3modal/ethers5": "^3.3.0",
+    "@web3modal/html": "2.7.1",
     "ai": "4.3.19",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "ethers": "^5.7.2",
     "framer-motion": "latest",
     "lucide-react": "^0.454.0",
     "next": "^14.0.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "tailwind-merge": "^2.5.5",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "wagmi": "2.19.2",
+    "web3-eth": "latest",
+    "web3-eth-contract": "latest",
+    "web3-eth-ens": "latest",
+    "web3-types": "latest",
+    "web3-utils": "latest",
+    "web3modal-web3js": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",
@@ -33,7 +44,7 @@
     "eslint": "^8.0.0",
     "eslint-config-next": "^14.0.0",
     "postcss": "^8.5",
-    "tailwindcss": "^3.0.0",
+    "tailwindcss": "^3.4.17",
     "typescript": "^5"
   }
 }
