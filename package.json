@@ -14,9 +14,6 @@
     "@radix-ui/react-select": "latest",
     "@radix-ui/react-tabs": "latest",
     "@radix-ui/react-toast": "latest",
-    "@web3modal/ethers": "5.1.11",
-    "@web3modal/ethers5": "^3.3.0",
-    "@web3modal/html": "2.7.1",
     "ai": "4.3.19",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -28,13 +25,7 @@
     "react-dom": "^18.0.0",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
-    "wagmi": "2.19.2",
-    "web3-eth": "latest",
-    "web3-eth-contract": "latest",
-    "web3-eth-ens": "latest",
-    "web3-types": "latest",
-    "web3-utils": "latest",
-    "web3modal-web3js": "latest"
+    "web3modal-web3js": "0.1.0-alpha.1"
   },
   "devDependencies": {
     "@types/node": "^22",
