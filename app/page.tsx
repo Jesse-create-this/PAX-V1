@@ -11,18 +11,20 @@ import StudentDashboard from "@/components/student-dashboard"
 import RoleSelector from "@/components/role-selector"
 import LoadingSpinner from "@/components/loading-spinner"
 import Image from "next/image"
+import GoogleSignIn from "@/components/google-sign-in"
 
 type UserRole = "issuer" | "student" | null
+type AuthMethod = "wallet" | "google" | null
 
 export default function PaxDApp() {
   const [isConnected, setIsConnected] = useState(false)
   const [account, setAccount] = useState<string>("")
   const [userRole, setUserRole] = useState<UserRole>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [authMethod, setAuthMethod] = useState<AuthMethod>(null)
 
   const handleRoleSelect = (role: UserRole) => {
     setIsLoading(true)
-    // Simulate role setup delay
     setTimeout(() => {
       setUserRole(role)
       setIsLoading(false)
@@ -32,7 +34,23 @@ export default function PaxDApp() {
   const handleConnectionChange = (connected: boolean, address: string) => {
     setIsConnected(connected)
     setAccount(address)
-    if (!connected) {
+    if (connected) {
+      setAuthMethod("wallet")
+    } else {
+      setAuthMethod(null)
+      setUserRole(null)
+    }
+  }
+
+  const handleGoogleSignInChange = (signedIn: boolean, email?: string) => {
+    if (signedIn) {
+      setIsConnected(true)
+      setAccount(email || "Google User")
+      setAuthMethod("google")
+    } else {
+      setIsConnected(false)
+      setAccount("")
+      setAuthMethod(null)
       setUserRole(null)
     }
   }
@@ -72,7 +90,8 @@ export default function PaxDApp() {
                 </Button>
               </div>
             )}
-            <div className="scale-90 sm:scale-100">
+            <div className="flex items-center gap-2 scale-90 sm:scale-100 origin-right">
+              <GoogleSignIn onSignInChange={handleGoogleSignInChange} />
               <WalletConnection onConnectionChange={handleConnectionChange} />
             </div>
           </div>
@@ -121,7 +140,8 @@ export default function PaxDApp() {
                 <div className="flex items-center justify-center space-x-2 text-green-600 mt-6">
                   <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
                   <span className="font-semibold text-sm sm:text-base">
-                    Wallet Connected - {account.slice(0, 6)}...{account.slice(-4)}
+                    {authMethod === "wallet" ? "Wallet Connected - " : "Signed in with Google - "}
+                    {account.slice(0, 6)}...{account.slice(-4)}
                   </span>
                 </div>
               </div>
