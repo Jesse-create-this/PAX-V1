@@ -12,11 +12,17 @@ interface CertificateDownloadProps {
 export default function CertificateDownload({ studentData }: CertificateDownloadProps) {
   const [secondsRemaining, setSecondsRemaining] = useState(86400) // 24 hours in seconds
   const [downloaded, setDownloaded] = useState(false)
+  const [receivedInWallet, setReceivedInWallet] = useState(false)
 
   useEffect(() => {
+    // Only start timer if certificate was received and not yet downloaded
+    if (!receivedInWallet || downloaded) {
+      return
+    }
+
     const timer = setInterval(() => {
       setSecondsRemaining((prev) => {
-        if (prev <= 0) {
+        if (prev <= 1) {
           return 0
         }
         return prev - 1
@@ -24,13 +30,14 @@ export default function CertificateDownload({ studentData }: CertificateDownload
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [])
+  }, [receivedInWallet, downloaded])
 
   const hours = Math.floor(secondsRemaining / 3600)
   const minutes = Math.floor((secondsRemaining % 3600) / 60)
   const seconds = secondsRemaining % 60
 
   const handleReceiveCertificate = () => {
+    setReceivedInWallet(true)
     alert(`Certificate sent to your Pax Wallet!\n\nWallet: 0x${studentData.marticNumber.replace(/\D/g, "").slice(0, 20)}...`)
   }
 
@@ -89,38 +96,50 @@ export default function CertificateDownload({ studentData }: CertificateDownload
         </ul>
       </Card>
 
-      {/* Countdown Timer */}
-      <Card className="p-6 bg-orange-50 border border-orange-200">
-        <div className="text-center">
-          <p className="text-gray-600 mb-2">Time Remaining to Download</p>
-          <div className="text-4xl font-bold text-black font-mono">
-            {String(hours).padStart(2, "0")}:{String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
+      {/* Countdown Timer - Only show after receive certificate is clicked */}
+      {receivedInWallet && (
+        <Card className="p-6 bg-orange-50 border border-orange-200">
+          <div className="text-center">
+            <p className="text-gray-600 mb-2">Time Remaining to Download</p>
+            <div className="text-4xl font-bold text-black font-mono">
+              {String(hours).padStart(2, "0")}:{String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
+            </div>
+            <p className="text-sm text-gray-600 mt-2">
+              {downloaded
+                ? "Certificate downloaded successfully! It will still be sent to your email after 24 hours as a backup."
+                : "Download your certificate before time expires"}
+            </p>
           </div>
-          <p className="text-sm text-gray-600 mt-2">
-            {downloaded
-              ? "Certificate downloaded successfully!"
-              : "Download your certificate before time expires"}
-          </p>
-        </div>
-      </Card>
+        </Card>
+      )}
 
       {/* Action Buttons */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Button
           onClick={handleReceiveCertificate}
-          className="bg-black text-white hover:bg-gray-800 h-auto py-4 flex items-center justify-center gap-2 font-semibold"
+          disabled={receivedInWallet}
+          className="bg-black text-white hover:bg-gray-800 h-auto py-4 flex items-center justify-center gap-2 font-semibold disabled:bg-gray-600 disabled:cursor-not-allowed"
         >
           <Wallet className="h-5 w-5" />
-          Receive Certificate in Pax Wallet
+          {receivedInWallet ? "Certificate Received ✓" : "Receive Certificate in Pax Wallet"}
         </Button>
         <Button
           onClick={handleDownloadCertificate}
-          className="bg-orange-600 text-white hover:bg-orange-700 h-auto py-4 flex items-center justify-center gap-2 font-semibold"
+          disabled={!receivedInWallet}
+          className="bg-orange-600 text-white hover:bg-orange-700 h-auto py-4 flex items-center justify-center gap-2 font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
           <Download className="h-5 w-5" />
           Download Certificate
         </Button>
       </div>
+      
+      {!receivedInWallet && (
+        <Card className="p-4 bg-orange-50 border border-orange-200">
+          <p className="text-orange-900 text-sm text-center font-medium">
+            Please click "Receive Certificate in Pax Wallet" first before downloading
+          </p>
+        </Card>
+      )}
 
       {/* Completion Message */}
       {downloaded && (
