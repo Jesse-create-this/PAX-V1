@@ -4,7 +4,6 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 import { Web3Provider } from "@/components/web3-provider"
-import { AuthProvider } from "@/components/auth-provider" // Added import for AuthProvider
 
 const inter = Inter({ subsets: ["latin"] })
 
