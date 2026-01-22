@@ -3,6 +3,7 @@
 import React from "react"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,11 +12,12 @@ import { X } from "lucide-react"
 
 interface LoginModalProps {
   onClose: () => void
-  onLogin: (data: any) => void
+  onLoginClick?: () => void
   onOpenChange: (open: boolean) => void
 }
 
-export default function LoginModal({ onClose, onLogin, onOpenChange }: LoginModalProps) {
+export default function LoginModal({ onClose, onLoginClick, onOpenChange }: LoginModalProps) {
+  const router = useRouter()
   const [formData, setFormData] = useState({
     marticNumber: "",
     password: "",
@@ -33,7 +35,8 @@ export default function LoginModal({ onClose, onLogin, onOpenChange }: LoginModa
       formData.semester &&
       formData.email
     ) {
-      onLogin({
+      // Store student data in sessionStorage so dashboard can access it
+      const studentData = {
         ...formData,
         name: "John Okonkwo",
         part: "I",
@@ -41,7 +44,12 @@ export default function LoginModal({ onClose, onLogin, onOpenChange }: LoginModa
         department: "Computer Science",
         faculty: "Science",
         degreeProgram: "B.Sc Computer Science",
-      })
+      }
+      sessionStorage.setItem("studentData", JSON.stringify(studentData))
+      
+      // Close modal and redirect to dashboard
+      onOpenChange(false)
+      router.push("/dashboard")
     }
   }
 
